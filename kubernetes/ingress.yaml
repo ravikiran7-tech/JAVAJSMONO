@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: react-nextjs-host-ingress
+  namespace: react-nextjs-host
+  labels:
+    app: react-nextjs-host
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "react-nextjs-host-ip"
+spec:
+  rules:
+  - host: react-nextjs-host.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: react-nextjs-host-service
+            port:
+              number: 80

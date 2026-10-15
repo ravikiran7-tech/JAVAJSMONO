@@ -1,49 +1,43 @@
-# Multi-stage Dockerfile for Next.js application on GKE Autopilot
-# Stage 1: Build stage - Install dependencies and build the application
-FROM node:18-alpine AS builder
+# Multi-stage Dockerfile for Java 17 Maven application
+# Builder stage: Compile and package the application
+FROM maven:3.9.4-eclipse-temurin-17 AS builder
+
+WORKDIR /workspace
+
+# Copy pom.xml first for dependency caching
+COPY pom.xml .
+
+# Download dependencies (cached layer)
+RUN mvn dependency:go-offline -B
+
+# Copy source code
+COPY src ./src
+
+# Build the application (skip tests for faster builds)
+RUN mvn clean package -DskipTests
+
+# Runtime stage: Run the application
+FROM amazoncorretto:17
 
 WORKDIR /app
-
-# Copy package files for dependency installation
-COPY package*.json ./
-
-# Install dependencies (including devDependencies needed for build)
-RUN npm ci
-
-# Copy application source code
-COPY . .
-
-# Build the Next.js application with production optimization
-RUN npm run build
-
-# Stage 2: Runtime stage - Minimal production image
-FROM node:18-alpine AS runner
-
-WORKDIR /app
-
-# Set NODE_ENV to production
-ENV NODE_ENV=production
-
-# Copy package files and install only production dependencies
-COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
-
-# Copy built application from builder stage
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/pages ./pages
-COPY --from=builder /app/server.js ./server.js
 
 # Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001 && \
-    chown -R nextjs:nodejs /app
+RUN groupadd -r appuser && useradd -r -g appuser appuser
 
-USER nextjs
+# Copy the JAR from builder stage
+COPY --from=builder /workspace/target/*.jar app.jar
 
-# Use environment variable for port configuration
-ENV PORT=3000
-EXPOSE 3000
+# Set ownership to non-root user
+RUN chown -R appuser:appuser /app
 
-# Start the Next.js application
-CMD ["node", "server.js"]
+# Switch to non-root user
+USER appuser
+
+# Expose application port
+EXPOSE 8080
+
+# Set JVM options for containerized environment
+ENV JAVA_OPTS="-Xmx512m -Xms256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
+# Run the application
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
