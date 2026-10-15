@@ -1,5 +1,6 @@
-// cz-js-1034 build-time REACT_APP_* env vars compiled into bundle
+// Runtime configuration using window.__ENV__ for containerized deployment
+// This enables single image deployment across Kubernetes environments
 export const config = {
-  apiUrl: process.env.REACT_APP_API_URL,  // baked at build time
-  feature: process.env.REACT_APP_FEATURE_FLAG,
+  apiUrl: window.__ENV__.API_URL,  // loaded at runtime from ConfigMap
+  feature: window.__ENV__.FEATURE_FLAG,
 };
