@@ -2,6 +2,10 @@ package com.trianz.reactnextjs;
 
 import com.sun.net.httpserver.HttpServer;
 import com.trianz.reactnextjs.controller.HealthController;
+import com.trianz.reactnextjs.controller.UploadController;
+import com.trianz.reactnextjs.controller.SessionController;
+import com.trianz.reactnextjs.controller.StateController;
+import com.trianz.reactnextjs.service.RedisService;
 
 import java.net.InetSocketAddress;
 
@@ -20,8 +24,17 @@ public class Application {
 
     public static void main(String[] args) throws Exception {
         int port = 8080;
+        
+        // Initialize Redis service for session and state management
+        RedisService redisService = new RedisService();
+        
+        // Create HTTP server and register endpoints
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/api/health", new HealthController());
+        server.createContext("/api/upload/presigned-url", new UploadController());
+        server.createContext("/api/session", new SessionController(redisService));
+        server.createContext("/api/state", new StateController(redisService));
+        
         server.setExecutor(null);
         server.start();
         System.out.println("react-nextjs-host listening on port " + port);

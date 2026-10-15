@@ -1,5 +1,6 @@
-// cz-js-1034 build-time REACT_APP_* env vars compiled into bundle
+// Runtime configuration loaded from window.__ENV__ (injected at container startup)
+// Replaces build-time REACT_APP_* variables for container image reuse across environments
 export const config = {
-  apiUrl: process.env.REACT_APP_API_URL,  // baked at build time
-  feature: process.env.REACT_APP_FEATURE_FLAG,
+  apiUrl: window.__ENV__?.API_URL,
+  feature: window.__ENV__?.FEATURE_FLAG,
 };
