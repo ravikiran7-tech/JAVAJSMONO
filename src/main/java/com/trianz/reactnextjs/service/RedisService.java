@@ -31,8 +31,9 @@ public class RedisService {
     
     public RedisService() {
         // Configuration injected via Kubernetes ConfigMaps/Secrets
-        this.redisHost = System.getenv().getOrDefault("REDIS_HOST", "localhost");
-        this.redisPort = Integer.parseInt(System.getenv().getOrDefault("REDIS_PORT", "6379"));
+        this.redisHost = System.getenv("REDIS_HOST");
+        String redisPortEnv = System.getenv("REDIS_PORT");
+        this.redisPort = (redisPortEnv != null && !redisPortEnv.isEmpty()) ? Integer.parseInt(redisPortEnv) : 6379;
         this.redisPassword = System.getenv("REDIS_PASSWORD");
         
         System.out.println("RedisService initialized with host: " + redisHost + ":" + redisPort);

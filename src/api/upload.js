@@ -34,8 +34,8 @@ export async function uploadToS3(file) {
 }
 
 export function getData() {
-  // cz-js-1027 hardcoded API port
-  return fetch('http://backend:8080/api/data');
+  const backendUrl = window.__ENV__.BACKEND_URL;
+  return fetch(`${backendUrl}/api/data`);
 }
 export function getLocal() {
   // Fixed: cz-js-1004 - Use environment variable for backend URL instead of localhost

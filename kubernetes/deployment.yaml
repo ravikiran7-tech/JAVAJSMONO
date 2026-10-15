@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: react-nextjs-host
+  namespace: react-nextjs-host
+  labels:
+    app: react-nextjs-host
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: react-nextjs-host
+  template:
+    metadata:
+      labels:
+        app: react-nextjs-host
+        version: v1
+    spec:
+      containers:
+      - name: react-nextjs-host
+        image: {{IMAGE_URI}}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        # Server configuration
+        - name: SERVER_PORT
+          value: "8080"
+        
+        # Frontend runtime configuration
+        - name: API_URL
+          value: "{{API_URL}}"
+        - name: BACKEND_URL
+          value: "{{BACKEND_URL}}"
+        - name: S3_BUCKET_NAME
+          value: "{{S3_BUCKET_NAME}}"
+        - name: FEATURE_FLAG
+          value: "{{FEATURE_FLAG}}"
+        
+        # Redis configuration (external ElastiCache)
+        - name: REDIS_HOST
+          value: "{{REDIS_HOST}}"
+        - name: REDIS_PORT
+          value: "{{REDIS_PORT}}"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-credentials
+              key: password
+              optional: true
+        
+        # AWS S3 configuration
+        - name: AWS_REGION
+          value: "{{AWS_REGION}}"
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: access-key-id
+              optional: true
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: secret-access-key
+              optional: true
+        
+        # JVM options
+        - name: JAVA_OPTS
+          value: "-Xmx512m -Xms256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+        
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+        
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+      
+      restartPolicy: Always

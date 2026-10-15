@@ -20,10 +20,10 @@ import javax.crypto.spec.SecretKeySpec;
  */
 public class S3UploadService {
 
-    private static final String AWS_REGION = System.getenv().getOrDefault("AWS_REGION", "us-east-1");
-    private static final String S3_BUCKET = System.getenv().getOrDefault("S3_BUCKET_NAME", "my-upload-bucket");
-    private static final String AWS_ACCESS_KEY = System.getenv().getOrDefault("AWS_ACCESS_KEY_ID", "");
-    private static final String AWS_SECRET_KEY = System.getenv().getOrDefault("AWS_SECRET_ACCESS_KEY", "");
+    private static final String AWS_REGION = System.getenv("AWS_REGION");
+    private static final String S3_BUCKET = System.getenv("S3_BUCKET_NAME");
+    private static final String AWS_ACCESS_KEY = System.getenv("AWS_ACCESS_KEY_ID");
+    private static final String AWS_SECRET_KEY = System.getenv("AWS_SECRET_ACCESS_KEY");
     private static final int EXPIRATION_SECONDS = 3600; // 1 hour
 
     /**

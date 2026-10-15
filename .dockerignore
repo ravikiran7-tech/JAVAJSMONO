@@ -1,0 +1,44 @@
+# Exclude build artifacts and unnecessary files
+target/
+.git/
+.gitignore
+*.md
+README.md
+DEPLOYMENT.md
+
+# Maven wrapper files (use system maven instead)
+mvnw
+mvnw.cmd
+.mvn/
+
+# Gradle wrapper files (use system gradle instead)
+gradlew
+gradlew.bat
+gradle/wrapper/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+.project
+.classpath
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+src/test/
+
+# Documentation
+docs/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+Jenkinsfile
+
+# Logs
+*.log
+logs/

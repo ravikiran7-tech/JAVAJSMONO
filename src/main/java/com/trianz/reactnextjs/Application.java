@@ -23,7 +23,8 @@ import java.net.InetSocketAddress;
 public class Application {
 
     public static void main(String[] args) throws Exception {
-        int port = 8080;
+        String portEnv = System.getenv("SERVER_PORT");
+        int port = (portEnv != null && !portEnv.isEmpty()) ? Integer.parseInt(portEnv) : 8080;
         
         // Initialize Redis service for session and state management
         RedisService redisService = new RedisService();
