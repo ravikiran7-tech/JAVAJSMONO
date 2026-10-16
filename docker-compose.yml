@@ -1,0 +1,36 @@
+version: "3.9"
+
+# =============================================================================
+# docker-compose.yml – react-nextjs-host (Application Only)
+# NOTE: Only the application service is defined here.
+#       All external services (databases, caches, message brokers) are
+#       expected to be provided separately and referenced via env vars.
+# =============================================================================
+
+services:
+  react-nextjs-host:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: react-nextjs-host:latest
+    container_name: react-nextjs-host
+    ports:
+      - "8080:8080"
+    environment:
+      # JVM tuning
+      JAVA_OPTS: >-
+        -XX:+UseContainerSupport
+        -XX:MaxRAMPercentage=75.0
+        -Xms256m
+        -Xmx512m
+      TZ: UTC
+      # Add any external service connection strings here, e.g.:
+      # DATABASE_URL: ${DATABASE_URL}
+      # REDIS_HOST: ${REDIS_HOST}
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

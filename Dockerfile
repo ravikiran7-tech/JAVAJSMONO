@@ -1,57 +1,69 @@
 # =============================================================================
-# Multi-Stage Dockerfile for Angular Application on Azure Kubernetes Service
-# Rule: cz-js-1014 – Missing Multi-Stage Dockerfile for Angular Apps
-# Strategy: Build stage (Node.js + Angular CLI) → Runtime stage (nginx:alpine)
-# Registry: Azure Container Registry (ACR) with Azure Workload Identity
+# Multi-Stage Dockerfile for react-nextjs-host (Java 17 Maven Application)
+# Builder : maven:3.9.4-eclipse-temurin-17
+# Runtime : amazoncorretto:17
+# Target  : Azure Kubernetes Service (AKS)
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# Stage 1: Build – Node.js + Angular CLI
-# Compiles the Angular application and produces the optimised dist/ artefacts.
-# This stage is discarded in the final image, keeping Node/npm/source out of
-# the runtime container and reducing image size by ~10x.
+# Stage 1: Build – Maven + Eclipse Temurin 17
+# Compiles the Java application and produces the executable JAR.
+# This stage is discarded in the final image, keeping Maven/source out of
+# the runtime container and reducing image size significantly.
 # -----------------------------------------------------------------------------
-FROM node:18-alpine AS build
+FROM maven:3.9.4-eclipse-temurin-17 AS builder
 
-# Build-time argument for the Angular output directory (default: dist/app)
-ARG ANGULAR_OUTPUT_PATH=dist/app
+WORKDIR /workspace
 
-WORKDIR /app
+# Copy dependency manifest first to leverage Docker layer caching.
+# Dependencies are downloaded before source code is copied, so they are
+# cached as long as pom.xml does not change.
+COPY pom.xml .
 
-# Copy dependency manifests first to leverage Docker layer caching
-COPY package.json package-lock.json* ./
-
-# Install all dependencies (including devDependencies needed for the build)
-RUN npm ci
+RUN mvn dependency:go-offline -B
 
 # Copy the rest of the source code
-COPY . .
+COPY src ./src
 
-# Build the Angular application in production mode
-# NODE_ENV=production ensures AOT compilation, tree-shaking, and minification
-RUN NODE_ENV=production npx ng build --configuration=production --output-path=${ANGULAR_OUTPUT_PATH}
+# Build the application JAR (skip tests for Docker build)
+RUN mvn clean package -DskipTests -B
 
 # -----------------------------------------------------------------------------
-# Stage 2: Runtime – nginx:alpine
-# Serves the pre-built static assets from dist/.
-# Final image contains ONLY nginx + compiled assets (~20-40 MB).
+# Stage 2: Runtime – Amazon Corretto 17
+# Runs the pre-built JAR with a minimal JRE footprint.
+# Final image contains ONLY the JRE + application JAR.
 # -----------------------------------------------------------------------------
-FROM nginx:alpine AS runtime
+FROM amazoncorretto:17
 
-# Build-time argument must be re-declared in the new stage
-ARG ANGULAR_OUTPUT_PATH=dist/app
+# Set working directory
+WORKDIR /app
 
-# Remove the default nginx welcome page
-RUN rm -rf /usr/share/nginx/html/*
+# Create a non-root user for security best practices
+RUN groupadd --system appgroup && \
+    useradd --system --gid appgroup --no-create-home appuser
 
-# Copy compiled Angular artefacts from the build stage
-COPY --from=build /app/${ANGULAR_OUTPUT_PATH} /usr/share/nginx/html
+# Set timezone
+ENV TZ=UTC
 
-# Copy custom nginx configuration for Angular HTML5 routing support
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# JVM tuning: container-aware memory management
+ENV JAVA_OPTS="-XX:+UseContainerSupport \
+               -XX:MaxRAMPercentage=75.0 \
+               -XX:+UnlockExperimentalVMOptions \
+               -Xms256m \
+               -Xmx512m \
+               -Djava.security.egd=file:/dev/./urandom"
 
-# Expose port 80 (standard HTTP – mapped by K8s Service / AKS Ingress)
-EXPOSE 80
+# Copy the built JAR from the builder stage
+COPY --from=builder /workspace/target/react-nextjs-host.jar app.jar
 
-# Run nginx in the foreground (required for container process management)
-CMD ["nginx", "-g", "daemon off;"]
+# Change ownership to non-root user
+RUN chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose the application port
+EXPOSE 8080
+
+# Run the application with JVM options
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
