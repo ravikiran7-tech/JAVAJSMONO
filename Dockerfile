@@ -1,11 +1,15 @@
-# cz-js-1038 single-stage Dockerfile (no multi-stage)
-FROM node:18
+# Stage 1: Build stage - Node.js + Angular/React CLI build environment
+FROM node:18-alpine AS build
 WORKDIR /app
+COPY package*.json ./
+RUN npm ci
 COPY . .
-RUN npm install
-# cz-js-1037 build without production optimization
-RUN npm run build
-# cz-js-1039 hardcoded build output path
-COPY /app/build /var/www/html
-EXPOSE 3000
-CMD ["npm", "start"]
+ARG BUILD_OUTPUT_DIR=dist
+RUN NODE_ENV=production npm run build
+
+# Stage 2: Runtime stage - minimal nginx:alpine serving dist/
+FROM nginx:alpine
+ARG BUILD_OUTPUT_DIR=dist
+COPY --from=build /app/${BUILD_OUTPUT_DIR} /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
